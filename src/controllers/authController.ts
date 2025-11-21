@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import jwt, { SignOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../types";
 
@@ -7,11 +7,9 @@ const generateToken = (id: string, role: string): string => {
   const jwtSecret = process.env.JWT_SECRET || "default_secret";
   const jwtExpire = process.env.JWT_EXPIRE || "7d";
 
-  const options: SignOptions = {
+  return jwt.sign({ id, role }, jwtSecret, {
     expiresIn: jwtExpire,
-  };
-
-  return jwt.sign({ id, role }, jwtSecret, options);
+  } as jwt.SignOptions);
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {

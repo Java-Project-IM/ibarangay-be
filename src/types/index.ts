@@ -81,6 +81,7 @@ export interface AuthRequest extends Request {
     id: string;
     role: string;
   };
+  id?: string; // Request ID for tracing
 }
 
 export interface JWTPayload {
