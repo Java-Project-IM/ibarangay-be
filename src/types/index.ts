@@ -105,6 +105,7 @@ export interface AuthRequest extends Request {
     role: string;
   };
   id?: string; // Request ID for tracing
+  file?: Express.Multer.File; // Add multer file support
 }
 
 export interface JWTPayload {

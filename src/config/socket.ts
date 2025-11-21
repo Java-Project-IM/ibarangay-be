@@ -21,8 +21,9 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
   });
 
   // Authentication middleware for Socket.IO
-  io.use((socket: AuthSocket, next) => {
+  io.use((socket: Socket, next: (err?: Error) => void) => {
     try {
+      const authSocket = socket as AuthSocket;
       const token =
         socket.handshake.auth.token ||
         socket.handshake.headers.authorization?.replace("Bearer ", "");
@@ -34,8 +35,8 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
       const jwtSecret = process.env.JWT_SECRET || "default_secret";
       const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
 
-      socket.userId = decoded.id;
-      socket.userRole = decoded.role;
+      authSocket.userId = decoded.id;
+      authSocket.userRole = decoded.role;
 
       next();
     } catch (error) {
@@ -43,16 +44,19 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
     }
   });
 
-  io.on("connection", (socket: AuthSocket) => {
-    console.log(`✅ User connected: ${socket.userId} (${socket.userRole})`);
+  io.on("connection", (socket: Socket) => {
+    const authSocket = socket as AuthSocket;
+    console.log(
+      `✅ User connected: ${authSocket.userId} (${authSocket.userRole})`
+    );
 
     // Join user-specific room
-    if (socket.userId) {
-      socket.join(`user:${socket.userId}`);
+    if (authSocket.userId) {
+      socket.join(`user:${authSocket.userId}`);
     }
 
     // Join role-specific rooms
-    if (socket.userRole === "admin" || socket.userRole === "staff") {
+    if (authSocket.userRole === "admin" || authSocket.userRole === "staff") {
       socket.join("staff-room");
     }
 
@@ -60,34 +64,34 @@ export const initializeSocket = (httpServer: HTTPServer): Server => {
     socket.on("subscribe:complaint", (complaintId: string) => {
       socket.join(`complaint:${complaintId}`);
       console.log(
-        `User ${socket.userId} subscribed to complaint ${complaintId}`
+        `User ${authSocket.userId} subscribed to complaint ${complaintId}`
       );
     });
 
     socket.on("unsubscribe:complaint", (complaintId: string) => {
       socket.leave(`complaint:${complaintId}`);
       console.log(
-        `User ${socket.userId} unsubscribed from complaint ${complaintId}`
+        `User ${authSocket.userId} unsubscribed from complaint ${complaintId}`
       );
     });
 
     // Handle typing indicators
     socket.on("typing:start", (data: { complaintId: string }) => {
       socket.to(`complaint:${data.complaintId}`).emit("user:typing", {
-        userId: socket.userId,
+        userId: authSocket.userId,
         complaintId: data.complaintId,
       });
     });
 
     socket.on("typing:stop", (data: { complaintId: string }) => {
       socket.to(`complaint:${data.complaintId}`).emit("user:stopped-typing", {
-        userId: socket.userId,
+        userId: authSocket.userId,
         complaintId: data.complaintId,
       });
     });
 
     socket.on("disconnect", () => {
-      console.log(`❌ User disconnected: ${socket.userId}`);
+      console.log(`❌ User disconnected: ${authSocket.userId}`);
     });
   });
 
