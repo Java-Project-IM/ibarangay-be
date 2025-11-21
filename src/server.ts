@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
+import { createServer } from "http";
 import app from "./app";
 import { connectDatabase, disconnectDatabase } from "./config/database";
+import { initializeSocket } from "./config/socket";
 
 // Load environment variables
 dotenv.config();
@@ -16,12 +18,20 @@ const startServer = async (): Promise<void> => {
     // Connect to database
     await connectDatabase();
 
-    // Start Express server
-    server = app.listen(PORT, () => {
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.IO
+    initializeSocket(httpServer);
+    console.log("✅ Socket.IO initialized");
+
+    // Start server
+    server = httpServer.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🔗 API Base URL: http://localhost:${PORT}/api/v1`);
       console.log(`💚 Health Check: http://localhost:${PORT}/health`);
+      console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

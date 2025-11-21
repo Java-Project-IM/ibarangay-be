@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
 import compression from "compression";
+import path from "path";
 import { errorHandler } from "./middleware/errorHandler";
 import { apiLimiter } from "./middleware/rateLimiter";
 
@@ -13,6 +14,9 @@ import complaintRoutes from "./routes/complaintRoutes";
 import eventRoutes from "./routes/eventRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
+import uploadRoutes from "./routes/uploadRoutes";
+import bulkRoutes from "./routes/bulkRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 
 const app: Application = express();
 
@@ -33,6 +37,10 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Compression middleware
 app.use(compression());
+
+// Serve static files (uploads)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/exports", express.static(path.join(process.cwd(), "exports")));
 
 // Logging middleware
 if (process.env.NODE_ENV === "development") {
@@ -62,6 +70,9 @@ app.use(`/api/${apiVersion}/complaints`, complaintRoutes);
 app.use(`/api/${apiVersion}/events`, eventRoutes);
 app.use(`/api/${apiVersion}/notifications`, notificationRoutes);
 app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
+app.use(`/api/${apiVersion}/upload`, uploadRoutes);
+app.use(`/api/${apiVersion}/bulk`, bulkRoutes);
+app.use(`/api/${apiVersion}/analytics`, analyticsRoutes);
 
 // 404 handler
 app.use((_req, res) => {

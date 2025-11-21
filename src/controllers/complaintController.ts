@@ -3,6 +3,7 @@ import Complaint from "../models/Complaint";
 import Notification from "../models/Notification";
 import User from "../models/User";
 import { AuthRequest } from "../types";
+import { emitToUser, emitToStaff, emitToComplaint } from "../config/socket";
 
 // Auto-assign complaint to staff based on category
 const autoAssignComplaint = async (complaintId: string, category: string) => {
@@ -34,6 +35,12 @@ const autoAssignComplaint = async (complaintId: string, category: string) => {
         type: "info",
         relatedId: complaintId,
         relatedType: "complaint",
+      });
+
+      // Real-time notification
+      emitToUser(randomStaff._id.toString(), "complaint:assigned", {
+        complaintId,
+        category,
       });
     }
   } catch (error) {
@@ -77,6 +84,14 @@ export const createComplaint = async (
       type: "success",
       relatedId: complaint._id,
       relatedType: "complaint",
+    });
+
+    // Real-time notification to staff
+    emitToStaff("complaint:new", {
+      complaintId: complaint._id,
+      title,
+      category,
+      priority,
     });
 
     res.status(201).json({
@@ -241,6 +256,19 @@ export const updateComplaintStatus = async (
       relatedType: "complaint",
     });
 
+    // Real-time notifications
+    emitToUser(complaint.userId.toString(), "complaint:status-changed", {
+      complaintId: complaint._id,
+      status,
+      previousStatus,
+    });
+
+    emitToComplaint(complaint._id.toString(), "status:updated", {
+      status,
+      response,
+      updatedBy: req.user?.id,
+    });
+
     res.status(200).json({
       success: true,
       message: "Complaint updated successfully",
@@ -304,6 +332,12 @@ export const assignComplaint = async (
       relatedType: "complaint",
     });
 
+    // Real-time notification
+    emitToUser(staffId, "complaint:assigned", {
+      complaintId: complaint._id,
+      title: complaint.title,
+    });
+
     res.status(200).json({
       success: true,
       message: "Complaint assigned successfully",
@@ -363,7 +397,23 @@ export const addComment = async (
         relatedId: complaint._id,
         relatedType: "complaint",
       });
+
+      // Real-time notification
+      emitToUser(complaint.userId.toString(), "complaint:new-comment", {
+        complaintId: complaint._id,
+        message,
+      });
     }
+
+    // Real-time update to complaint subscribers
+    emitToComplaint(complaint._id.toString(), "comment:added", {
+      comment: {
+        userId: req.user?.id,
+        message,
+        isInternal,
+        createdAt: new Date(),
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -425,6 +475,23 @@ export const rateComplaint = async (
     complaint.feedback = feedback;
     await complaint.save();
 
+    // Notify assigned staff about the rating
+    if (complaint.assignedTo) {
+      await Notification.create({
+        userId: complaint.assignedTo,
+        title: "Complaint Rated",
+        message: `Your resolved complaint received a ${rating}-star rating`,
+        type: "info",
+        relatedId: complaint._id,
+        relatedType: "complaint",
+      });
+
+      emitToUser(complaint.assignedTo.toString(), "complaint:rated", {
+        complaintId: complaint._id,
+        rating,
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Thank you for your feedback!",
@@ -476,6 +543,12 @@ export const escalateComplaint = async (
         type: "warning",
         relatedId: complaint._id,
         relatedType: "complaint",
+      });
+
+      // Real-time notification
+      emitToUser(admin._id.toString(), "complaint:escalated", {
+        complaintId: complaint._id,
+        escalationLevel: complaint.escalationLevel,
       });
     }
 
