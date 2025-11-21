@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   createEvent,
   getEvents,
@@ -7,17 +7,36 @@ import {
   unregisterFromEvent,
   updateEvent,
   deleteEvent,
-} from '../controllers/eventController';
-import { authenticate, authorize } from '../middleware/auth';
+} from "../controllers/eventController";
+import { authenticate, authorize } from "../middleware/auth";
+import { eventValidation, idValidation } from "../middleware/validation";
 
 const router = Router();
 
-router.post('/', authenticate, authorize('admin', 'staff'), createEvent);
-router.get('/', getEvents);
-router.get('/:id', getEventById);
-router.post('/:id/register', authenticate, registerForEvent);
-router.post('/:id/unregister', authenticate, unregisterFromEvent);
-router.put('/:id', authenticate, updateEvent);
-router.delete('/:id', authenticate, deleteEvent);
+router.post(
+  "/",
+  authenticate,
+  authorize("admin", "staff"),
+  eventValidation,
+  createEvent
+);
+router.get("/", authenticate, getEvents);
+router.get("/:id", authenticate, idValidation, getEventById);
+router.post("/:id/register", authenticate, idValidation, registerForEvent);
+router.post("/:id/unregister", authenticate, idValidation, unregisterFromEvent);
+router.put(
+  "/:id",
+  authenticate,
+  authorize("admin", "staff"),
+  idValidation,
+  updateEvent
+);
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  idValidation,
+  deleteEvent
+);
 
 export default router;

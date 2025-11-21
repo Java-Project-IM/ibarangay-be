@@ -1,85 +1,56 @@
-# Barangay Services Backend API
+# Barangay Online Services - Backend API
 
 Enterprise-grade REST API for the Barangay Online Services System built with Node.js, Express, TypeScript, and MongoDB.
 
-## 🏗️ Architecture
-
-This backend follows the **MVC (Model-View-Controller)** pattern with clear separation of concerns:
-
-```
-src/
-├── controllers/     # Request handlers and business logic coordination
-├── models/          # MongoDB schemas and data models
-├── routes/          # API endpoint definitions
-├── middleware/      # Authentication, authorization, error handling
-├── config/          # Database and app configuration
-├── types/           # TypeScript interfaces and types
-└── server.ts        # Application entry point
-```
-
 ## 🚀 Features
 
-- **Authentication & Authorization**: JWT-based auth with role-based access control (Admin, Staff, Resident)
-- **Service Management**: Handle borrow/return requests for barangay equipment
-- **Complaint System**: Submit and track complaints with status updates
-- **Event Management**: Create, manage, and register for barangay events
-- **Notification System**: Real-time notifications for users
-- **Security**: Password hashing with bcrypt, JWT tokens, protected routes
-- **Validation**: Request validation and error handling
-- **TypeScript**: Full type safety and better developer experience
+- **Authentication & Authorization**: JWT-based authentication with role-based access control
+- **Service Requests**: Borrow and return barangay equipment
+- **Complaints Management**: Submit and track community complaints
+- **Events Management**: Create and register for barangay events
+- **Notifications**: Real-time notifications for users
+- **Security**: Rate limiting, helmet, CORS, input validation
+- **Error Handling**: Comprehensive error handling with custom error classes
+- **Database**: MongoDB with Mongoose ODM
+- **TypeScript**: Full type safety and IntelliSense support
 
 ## 📋 Prerequisites
 
-- Node.js (v18 or higher)
-- MongoDB (v6 or higher)
+- Node.js >= 16.x
+- MongoDB >= 5.x
 - npm or yarn
 
 ## 🛠️ Installation
 
-1. **Navigate to backend directory**:
-
-   ```bash
-   cd barangay-services-backend
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Configure your `.env` file**:
-
-   ```env
-   PORT=5000
-   NODE_ENV=development
-   MONGODB_URI=mongodb://localhost:27017/barangay_services
-   JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-   JWT_EXPIRE=7d
-   CORS_ORIGIN=http://localhost:5173
-   ```
-
-5. **Initialize the database** (see Database Setup section below)
-
-## 🗄️ Database Setup
-
-Run the initialization script to create collections and seed sample data:
+1. Clone the repository:
 
 ```bash
-node init-db.js
+git clone https://github.com/Java-Project-IM/ibarangay-be.git
+cd ibarangay-be
 ```
 
-This will create:
+2. Install dependencies:
 
-- Users collection with sample admin, staff, and resident accounts
-- Services, Complaints, Events, and Notifications collections
-- Proper indexes for optimal query performance
+```bash
+npm install
+```
+
+3. Create environment file:
+
+```bash
+cp .env.example .env
+```
+
+4. Configure environment variables in `.env`:
+
+```env
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/barangay_services
+JWT_SECRET=your_super_secret_jwt_key
+JWT_EXPIRE=7d
+CORS_ORIGIN=http://localhost:5173
+```
 
 ## 🏃 Running the Application
 
@@ -89,13 +60,23 @@ This will create:
 npm run dev
 ```
 
-Server will run on `http://localhost:5000` with hot-reload enabled.
-
 ### Production Mode
 
 ```bash
 npm run build
 npm start
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+### Formatting
+
+```bash
+npm run format
 ```
 
 ## 📚 API Documentation
@@ -119,8 +100,8 @@ Content-Type: application/json
   "lastName": "Dela Cruz",
   "email": "juan@example.com",
   "password": "password123",
-  "address": "123 Main St, Barangay XYZ",
-  "phoneNumber": "09123456789"
+  "address": "123 Main St, Barangay",
+  "phoneNumber": "+63 912 345 6789"
 }
 ```
 
@@ -153,12 +134,12 @@ Content-Type: application/json
 {
   "firstName": "Juan",
   "lastName": "Dela Cruz",
-  "address": "456 New St",
-  "phoneNumber": "09987654321"
+  "address": "456 New St, Barangay",
+  "phoneNumber": "+63 912 345 6789"
 }
 ```
 
-### Service Endpoints
+### Service Request Endpoints
 
 #### Create Service Request
 
@@ -168,21 +149,22 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "itemName": "Tent",
-  "itemType": "Equipment",
-  "borrowDate": "2024-12-25",
-  "expectedReturnDate": "2024-12-27",
-  "purpose": "Family gathering",
-  "quantity": 2,
-  "notes": "Need large tents"
+  "itemName": "Basketball Court",
+  "itemType": "Facility",
+  "borrowDate": "2024-01-15",
+  "expectedReturnDate": "2024-01-16",
+  "purpose": "Community basketball tournament",
+  "quantity": 1,
+  "notes": "Need access from 8 AM to 5 PM"
 }
 ```
 
 #### Get All Service Requests
 
 ```http
-GET /api/v1/services?status=pending
+GET /api/v1/services
 Authorization: Bearer <token>
+Query Parameters: ?status=pending
 ```
 
 #### Get Service Request by ID
@@ -201,7 +183,7 @@ Content-Type: application/json
 
 {
   "status": "approved",
-  "notes": "Approved for pickup"
+  "notes": "Request approved"
 }
 ```
 
@@ -223,7 +205,7 @@ Content-Type: application/json
 
 {
   "title": "Street Light Not Working",
-  "description": "The street light on Main St has been out for 3 days",
+  "description": "The street light on Main St has been broken for 3 days",
   "category": "Infrastructure",
   "priority": "high"
 }
@@ -232,15 +214,9 @@ Content-Type: application/json
 #### Get All Complaints
 
 ```http
-GET /api/v1/complaints?status=pending&priority=high
+GET /api/v1/complaints
 Authorization: Bearer <token>
-```
-
-#### Get Complaint by ID
-
-```http
-GET /api/v1/complaints/:id
-Authorization: Bearer <token>
+Query Parameters: ?status=pending&priority=high
 ```
 
 #### Update Complaint Status (Admin/Staff only)
@@ -267,8 +243,8 @@ Content-Type: application/json
 
 {
   "title": "Community Clean-up Drive",
-  "description": "Join us for a community clean-up",
-  "eventDate": "2024-12-30",
+  "description": "Join us for a community clean-up event",
+  "eventDate": "2024-02-01T08:00:00Z",
   "location": "Barangay Hall",
   "category": "Community Service",
   "maxAttendees": 50
@@ -278,13 +254,9 @@ Content-Type: application/json
 #### Get All Events
 
 ```http
-GET /api/v1/events?status=upcoming&category=Community Service
-```
-
-#### Get Event by ID
-
-```http
-GET /api/v1/events/:id
+GET /api/v1/events
+Authorization: Bearer <token>
+Query Parameters: ?status=upcoming&category=Community Service
 ```
 
 #### Register for Event
@@ -301,26 +273,14 @@ POST /api/v1/events/:id/unregister
 Authorization: Bearer <token>
 ```
 
-#### Update Event
-
-```http
-PUT /api/v1/events/:id
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Updated Event Title",
-  "maxAttendees": 100
-}
-```
-
 ### Notification Endpoints
 
 #### Get Notifications
 
 ```http
-GET /api/v1/notifications?isRead=false
+GET /api/v1/notifications
 Authorization: Bearer <token>
+Query Parameters: ?isRead=false
 ```
 
 #### Mark Notification as Read
@@ -330,7 +290,7 @@ PUT /api/v1/notifications/:id/read
 Authorization: Bearer <token>
 ```
 
-#### Mark All as Read
+#### Mark All Notifications as Read
 
 ```http
 PUT /api/v1/notifications/read-all
@@ -344,98 +304,97 @@ DELETE /api/v1/notifications/:id
 Authorization: Bearer <token>
 ```
 
-## 🔐 Authentication
+## 🔒 Security Features
 
-All protected routes require a JWT token in the Authorization header:
+- **Helmet**: Security headers
+- **CORS**: Cross-Origin Resource Sharing configuration
+- **Rate Limiting**: Prevents brute force attacks
+- **Input Validation**: Express-validator for request validation
+- **JWT Authentication**: Secure token-based authentication
+- **Password Hashing**: Bcrypt for password encryption
+- **Error Handling**: Comprehensive error handling
+
+## 🗂️ Project Structure
 
 ```
-Authorization: Bearer <your_jwt_token>
+src/
+├── config/           # Configuration files
+│   └── database.ts   # Database connection
+├── controllers/      # Route controllers
+│   ├── authController.ts
+│   ├── serviceController.ts
+│   ├── complaintController.ts
+│   ├── eventController.ts
+│   └── notificationController.ts
+├── middleware/       # Custom middleware
+│   ├── auth.ts       # Authentication middleware
+│   ├── errorHandler.ts
+│   ├── rateLimiter.ts
+│   └── validation.ts
+├── models/          # Mongoose models
+│   ├── User.ts
+│   ├── Service.ts
+│   ├── Complaint.ts
+│   ├── Event.ts
+│   └── Notification.ts
+├── routes/          # API routes
+│   ├── authRoutes.ts
+│   ├── serviceRoutes.ts
+│   ├── complaintRoutes.ts
+│   ├── eventRoutes.ts
+│   └── notificationRoutes.ts
+├── types/           # TypeScript types
+│   └── index.ts
+├── utils/           # Utility functions
+│   ├── AppError.ts
+│   └── asyncHandler.ts
+├── app.ts           # Express app setup
+└── server.ts        # Server entry point
 ```
-
-The token is returned upon successful login or registration.
-
-## 👥 User Roles
-
-- **Admin**: Full access to all features
-- **Staff**: Can manage service requests, complaints, and events
-- **Resident**: Can create requests, complaints, and register for events
 
 ## 🧪 Testing
 
-Test the API using tools like:
+```bash
+# Run tests (when implemented)
+npm test
 
-- Postman
-- Insomnia
-- cURL
-- Thunder Client (VS Code extension)
-
-## 📦 Project Structure Details
-
-### Controllers
-
-Handle HTTP requests and responses, coordinate business logic.
-
-### Models
-
-Define MongoDB schemas with validation, indexes, and methods.
-
-### Routes
-
-Define API endpoints and link them to controllers.
-
-### Middleware
-
-- `auth.ts`: JWT authentication and role-based authorization
-- `errorHandler.ts`: Centralized error handling
-
-### Types
-
-TypeScript interfaces for type safety across the application.
-
-## 🚨 Error Handling
-
-All errors are handled centrally and return consistent JSON responses:
-
-```json
-{
-  "success": false,
-  "message": "Error description"
-}
+# Run tests with coverage
+npm run test:coverage
 ```
 
-## 🔧 Environment Variables
+## 📝 Environment Variables
 
-| Variable    | Description               | Default                                     |
-| ----------- | ------------------------- | ------------------------------------------- |
-| PORT        | Server port               | 5000                                        |
-| NODE_ENV    | Environment               | development                                 |
-| MONGODB_URI | MongoDB connection string | mongodb://localhost:27017/barangay_services |
-| JWT_SECRET  | Secret key for JWT        | -                                           |
-| JWT_EXPIRE  | Token expiration          | 7d                                          |
-| CORS_ORIGIN | Allowed origin            | http://localhost:5173                       |
-
-## 📝 Sample Accounts (After DB Init)
-
-- **Admin**: admin@barangay.com / admin123
-- **Staff**: staff@barangay.com / staff123
-- **Resident**: resident@barangay.com / resident123
+| Variable                | Description                          | Default                                     |
+| ----------------------- | ------------------------------------ | ------------------------------------------- |
+| NODE_ENV                | Environment (development/production) | development                                 |
+| PORT                    | Server port                          | 5000                                        |
+| MONGODB_URI             | MongoDB connection string            | mongodb://localhost:27017/barangay_services |
+| JWT_SECRET              | Secret key for JWT                   | -                                           |
+| JWT_EXPIRE              | JWT expiration time                  | 7d                                          |
+| CORS_ORIGIN             | Allowed CORS origins                 | http://localhost:5173                       |
+| RATE_LIMIT_WINDOW_MS    | Rate limit window                    | 900000                                      |
+| RATE_LIMIT_MAX_REQUESTS | Max requests per window              | 100                                         |
 
 ## 🤝 Contributing
 
-This is a presentation project. For production use, consider:
-
-- Adding rate limiting
-- Implementing refresh tokens
-- Adding input sanitization
-- Setting up logging (Winston, Morgan)
-- Adding API documentation (Swagger)
-- Implementing file upload (Multer)
-- Adding email notifications (Nodemailer)
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT License - Feel free to use this for your projects!
+This project is licensed under the MIT License.
 
-## 🆘 Support
+## 👥 Authors
 
-For issues or questions, please refer to the documentation or create an issue in the repository.
+- Development Team
+
+## 🐛 Known Issues
+
+None at the moment. Please report issues on GitHub.
+
+## 📞 Support
+
+For support, email support@barangay.local or open an issue on GitHub.

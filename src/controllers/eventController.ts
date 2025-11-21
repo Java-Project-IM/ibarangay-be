@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { Types } from "mongoose";
 import Event from "../models/Event";
 import Notification from "../models/Notification";
 import { AuthRequest } from "../types";
@@ -36,10 +37,12 @@ export const createEvent = async (
       message: "Event created successfully",
       data: event,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to create event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to create event",
+      message: errorMessage,
     });
   }
 };
@@ -50,7 +53,7 @@ export const getEvents = async (
 ): Promise<void> => {
   try {
     const { status, category } = req.query;
-    const query: any = {};
+    const query: Record<string, unknown> = {};
 
     if (status) {
       query.status = status;
@@ -69,10 +72,12 @@ export const getEvents = async (
       success: true,
       data: events,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch events";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to fetch events",
+      message: errorMessage,
     });
   }
 };
@@ -98,10 +103,12 @@ export const getEventById = async (
       success: true,
       data: event,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to fetch event",
+      message: errorMessage,
     });
   }
 };
@@ -121,8 +128,10 @@ export const registerForEvent = async (
       return;
     }
 
+    const userId = new Types.ObjectId(req.user?.id);
+
     // Check if already registered
-    if (event.attendees.includes(req.user?.id as string)) {
+    if (event.attendees.some((attendee) => attendee.equals(userId))) {
       res.status(400).json({
         success: false,
         message: "Already registered for this event",
@@ -139,7 +148,7 @@ export const registerForEvent = async (
       return;
     }
 
-    event.attendees.push(req.user?.id as string);
+    event.attendees.push(userId);
     await event.save();
 
     // Create notification
@@ -157,10 +166,12 @@ export const registerForEvent = async (
       message: "Successfully registered for event",
       data: event,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to register for event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to register for event",
+      message: errorMessage,
     });
   }
 };
@@ -180,8 +191,10 @@ export const unregisterFromEvent = async (
       return;
     }
 
+    const userId = new Types.ObjectId(req.user?.id);
+
     // Check if registered
-    if (!event.attendees.includes(req.user?.id as string)) {
+    if (!event.attendees.some((attendee) => attendee.equals(userId))) {
       res.status(400).json({
         success: false,
         message: "Not registered for this event",
@@ -190,7 +203,7 @@ export const unregisterFromEvent = async (
     }
 
     event.attendees = event.attendees.filter(
-      (attendeeId: any) => attendeeId.toString() !== req.user?.id
+      (attendeeId) => !attendeeId.equals(userId)
     );
     await event.save();
 
@@ -199,10 +212,14 @@ export const unregisterFromEvent = async (
       message: "Successfully unregistered from event",
       data: event,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to unregister from event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to unregister from event",
+      message: errorMessage,
     });
   }
 };
@@ -246,10 +263,12 @@ export const updateEvent = async (
       message: "Event updated successfully",
       data: updatedEvent,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to update event",
+      message: errorMessage,
     });
   }
 };
@@ -287,10 +306,12 @@ export const deleteEvent = async (
       success: true,
       message: "Event deleted successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to delete event";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to delete event",
+      message: errorMessage,
     });
   }
 };

@@ -1,7 +1,10 @@
 import express, { Application } from "express";
 import cors from "cors";
 import morgan from "morgan";
+import helmet from "helmet";
+import compression from "compression";
 import { errorHandler } from "./middleware/errorHandler";
+import { apiLimiter } from "./middleware/rateLimiter";
 
 // Import routes
 import authRoutes from "./routes/authRoutes";
@@ -12,16 +15,33 @@ import notificationRoutes from "./routes/notificationRoutes";
 
 const app: Application = express();
 
-// Middleware
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:5173",
     credentials: true,
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
+
+// Body parsing middleware
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Compression middleware
+app.use(compression());
+
+// Logging middleware
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+} else {
+  app.use(morgan("combined"));
+}
+
+// Rate limiting
+app.use("/api", apiLimiter);
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -29,6 +49,7 @@ app.get("/health", (_req, res) => {
     success: true,
     message: "Server is running",
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
   });
 });
 

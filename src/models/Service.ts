@@ -1,46 +1,46 @@
-import mongoose, { Schema } from 'mongoose';
-import { IService } from '../types';
+import mongoose, { Schema } from "mongoose";
+import { IService } from "../types";
 
 const serviceSchema = new Schema<IService>(
   {
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: "User",
     },
     itemName: {
       type: String,
-      required: [true, 'Item name is required'],
+      required: [true, "Item name is required"],
       trim: true,
     },
     itemType: {
       type: String,
-      required: [true, 'Item type is required'],
+      required: [true, "Item type is required"],
       trim: true,
     },
     borrowDate: {
       type: Date,
-      required: [true, 'Borrow date is required'],
+      required: [true, "Borrow date is required"],
     },
     returnDate: {
       type: Date,
     },
     expectedReturnDate: {
       type: Date,
-      required: [true, 'Expected return date is required'],
+      required: [true, "Expected return date is required"],
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'borrowed', 'returned', 'rejected'],
-      default: 'pending',
+      enum: ["pending", "approved", "borrowed", "returned", "rejected"],
+      default: "pending",
     },
     purpose: {
       type: String,
-      required: [true, 'Purpose is required'],
+      required: [true, "Purpose is required"],
     },
     quantity: {
       type: Number,
-      required: [true, 'Quantity is required'],
+      required: [true, "Quantity is required"],
       min: 1,
     },
     notes: {
@@ -57,4 +57,4 @@ serviceSchema.index({ userId: 1, status: 1 });
 serviceSchema.index({ borrowDate: -1 });
 serviceSchema.index({ status: 1 });
 
-export default mongoose.model<IService>('Service', serviceSchema);
+export default mongoose.model<IService>("Service", serviceSchema);

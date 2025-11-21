@@ -1,8 +1,8 @@
 import { Request } from "express";
-import { Document } from "mongoose";
+import { Document, Types } from "mongoose";
 
 export interface IUser extends Document {
-  _id: any;
+  _id: Types.ObjectId;
   firstName: string;
   lastName: string;
   email: string;
@@ -17,8 +17,8 @@ export interface IUser extends Document {
 }
 
 export interface IService extends Document {
-  _id: any;
-  userId: string;
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   itemName: string;
   itemType: string;
   borrowDate: Date;
@@ -33,8 +33,8 @@ export interface IService extends Document {
 }
 
 export interface IComplaint extends Document {
-  _id: any;
-  userId: string;
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   title: string;
   description: string;
   category: string;
@@ -42,21 +42,21 @@ export interface IComplaint extends Document {
   priority: "low" | "medium" | "high";
   attachments?: string[];
   response?: string;
-  resolvedBy?: string;
+  resolvedBy?: Types.ObjectId;
   resolvedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface IEvent extends Document {
-  _id: any;
+  _id: Types.ObjectId;
   title: string;
   description: string;
   eventDate: Date;
   location: string;
-  organizer: string;
+  organizer: Types.ObjectId;
   maxAttendees?: number;
-  attendees: string[];
+  attendees: Types.ObjectId[];
   category: string;
   imageUrl?: string;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -65,13 +65,13 @@ export interface IEvent extends Document {
 }
 
 export interface INotification extends Document {
-  _id: any;
-  userId: string;
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
   title: string;
   message: string;
   type: "info" | "warning" | "success" | "error";
   isRead: boolean;
-  relatedId?: string;
+  relatedId?: Types.ObjectId;
   relatedType?: "service" | "complaint" | "event";
   createdAt: Date;
 }

@@ -4,7 +4,7 @@ import { INotification } from "../types";
 const notificationSchema = new Schema<INotification>(
   {
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       required: true,
       ref: "User",
     },
@@ -27,7 +27,7 @@ const notificationSchema = new Schema<INotification>(
       default: false,
     },
     relatedId: {
-      type: String,
+      type: Schema.Types.ObjectId,
     },
     relatedType: {
       type: String,

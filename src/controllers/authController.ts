@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../types";
 
@@ -7,12 +7,11 @@ const generateToken = (id: string, role: string): string => {
   const jwtSecret = process.env.JWT_SECRET || "default_secret";
   const jwtExpire = process.env.JWT_EXPIRE || "7d";
 
-  // Cast to any to satisfy overloaded typings of jsonwebtoken sign
-  return jwt.sign(
-    { id, role } as any,
-    jwtSecret as any,
-    { expiresIn: jwtExpire } as any
-  );
+  const options: SignOptions = {
+    expiresIn: jwtExpire,
+  };
+
+  return jwt.sign({ id, role }, jwtSecret, options);
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -42,7 +41,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id.toString(), user.role);
 
     res.status(201).json({
       success: true,
@@ -60,10 +59,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         token,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Registration failed";
     res.status(500).json({
       success: false,
-      message: error.message || "Registration failed",
+      message: errorMessage,
     });
   }
 };
@@ -93,7 +94,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id.toString(), user.role);
 
     res.status(200).json({
       success: true,
@@ -111,10 +112,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         token,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Login failed";
     res.status(500).json({
       success: false,
-      message: error.message || "Login failed",
+      message: errorMessage,
     });
   }
 };
@@ -147,10 +150,12 @@ export const getProfile = async (
         isVerified: user.isVerified,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to fetch profile";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to fetch profile",
+      message: errorMessage,
     });
   }
 };
@@ -189,10 +194,12 @@ export const updateProfile = async (
         phoneNumber: user.phoneNumber,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update profile";
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to update profile",
+      message: errorMessage,
     });
   }
 };
