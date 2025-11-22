@@ -3,6 +3,7 @@ import { createServer } from "http";
 import app from "./app";
 import { connectDatabase, disconnectDatabase } from "./config/database";
 import { initializeSocket } from "./config/socket";
+import SystemConfig from "./models/SystemConfig";
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +18,10 @@ const startServer = async (): Promise<void> => {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Initialize system configurations
+    await SystemConfig.initializeDefaults();
+    console.log("✅ System configurations initialized");
 
     // Create HTTP server
     const httpServer = createServer(app);
@@ -33,7 +38,7 @@ const startServer = async (): Promise<void> => {
       console.log(`💚 Health Check: http://localhost:${PORT}/health`);
       console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Failed to start server:", error);
     process.exit(1);
   }

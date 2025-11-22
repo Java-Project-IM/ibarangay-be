@@ -9,7 +9,7 @@ import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 
-// All bulk operations require admin or staff role
+// All bulk operations require admin/staff authorization
 router.put(
   "/complaints/status",
   authenticate,
@@ -24,7 +24,12 @@ router.put(
   bulkAssign
 );
 
-router.delete("/complaints", authenticate, authorize("admin"), bulkDelete);
+router.post(
+  "/complaints/delete",
+  authenticate,
+  authorize("admin", "staff"),
+  bulkDelete
+);
 
 router.get(
   "/complaints/export",

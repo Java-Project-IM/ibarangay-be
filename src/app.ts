@@ -19,6 +19,7 @@ import bulkRoutes from "./routes/bulkRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import announcementRoutes from "./routes/announcementRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import configRoutes from "./routes/configRoutes";
 
 const app: Application = express();
 
@@ -118,6 +119,7 @@ app.use(`/api/${apiVersion}/bulk`, bulkRoutes);
 app.use(`/api/${apiVersion}/analytics`, analyticsRoutes);
 app.use(`/api/${apiVersion}/announcements`, announcementRoutes);
 app.use(`/api/${apiVersion}/admin`, adminRoutes);
+app.use(`/api/${apiVersion}/config`, configRoutes);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -11,10 +11,17 @@ import {
   serviceRequestValidation,
   idValidation,
 } from "../middleware/validation";
+import { validateServiceItemType } from "../middleware/dynamicValidation";
 
 const router = Router();
 
-router.post("/", authenticate, serviceRequestValidation, createServiceRequest);
+router.post(
+  "/",
+  authenticate,
+  serviceRequestValidation,
+  validateServiceItemType,
+  createServiceRequest
+);
 router.get("/", authenticate, getServiceRequests);
 router.get("/:id", authenticate, idValidation, getServiceRequestById);
 router.put(

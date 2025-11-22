@@ -13,11 +13,18 @@ import {
 } from "../controllers/complaintController";
 import { authenticate, authorize } from "../middleware/auth";
 import { complaintValidation, idValidation } from "../middleware/validation";
+import { validateComplaintCategory } from "../middleware/dynamicValidation";
 
 const router = Router();
 
 // Public routes (authenticated)
-router.post("/", authenticate, complaintValidation, createComplaint);
+router.post(
+  "/",
+  authenticate,
+  complaintValidation,
+  validateComplaintCategory,
+  createComplaint
+);
 router.get("/", authenticate, getComplaints);
 router.get(
   "/stats",

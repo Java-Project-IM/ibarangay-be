@@ -143,7 +143,7 @@ export const changePasswordValidation = [
 ];
 
 /**
- * Validation rules for service request
+ * Validation rules for service request (without itemType validation - handled by dynamic middleware)
  */
 export const serviceRequestValidation = [
   body("itemName")
@@ -152,19 +152,17 @@ export const serviceRequestValidation = [
     .withMessage("Item name is required")
     .isLength({ max: 100 })
     .withMessage("Item name must not exceed 100 characters"),
-  body("itemType")
-    .trim()
-    .notEmpty()
-    .withMessage("Item type is required")
-    .isIn(["equipment", "facility", "document", "other"])
-    .withMessage("Invalid item type"),
+  body("itemType").trim().notEmpty().withMessage("Item type is required"),
   body("borrowDate")
     .notEmpty()
     .withMessage("Borrow date is required")
     .isISO8601()
     .withMessage("Invalid borrow date format")
     .custom((value) => {
-      if (new Date(value) < new Date()) {
+      const borrowDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (borrowDate < today) {
         throw new Error("Borrow date cannot be in the past");
       }
       return true;
@@ -217,7 +215,7 @@ export const serviceStatusValidation = [
 ];
 
 /**
- * Validation rules for complaint
+ * Validation rules for complaint (without category validation - handled by dynamic middleware)
  */
 export const complaintValidation = [
   body("title")
@@ -232,19 +230,7 @@ export const complaintValidation = [
     .withMessage("Description is required")
     .isLength({ min: 20, max: 2000 })
     .withMessage("Description must be between 20 and 2000 characters"),
-  body("category")
-    .trim()
-    .notEmpty()
-    .withMessage("Category is required")
-    .isIn([
-      "infrastructure",
-      "sanitation",
-      "security",
-      "noise",
-      "health",
-      "other",
-    ])
-    .withMessage("Invalid category"),
+  body("category").trim().notEmpty().withMessage("Category is required"),
   body("priority")
     .optional()
     .isIn(["low", "medium", "high"])
