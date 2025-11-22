@@ -3,6 +3,7 @@ import Complaint from "../models/Complaint";
 import Service from "../models/Service";
 import Event from "../models/Event";
 import User from "../models/User";
+import Announcement from "../models/Announcement";
 import { AuthRequest, DashboardStats } from "../types";
 
 export const getDashboardStats = async (
@@ -18,6 +19,7 @@ export const getDashboardStats = async (
       totalServices,
       totalEvents,
       totalUsers,
+      totalAnnouncements,
       complaintsByCategory,
       complaintsByPriority,
       recentComplaints,
@@ -31,6 +33,7 @@ export const getDashboardStats = async (
       Service.countDocuments(),
       Event.countDocuments(),
       User.countDocuments(),
+      Announcement.countDocuments({ isPublished: true }),
       Complaint.aggregate([
         { $group: { _id: "$category", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
@@ -120,6 +123,7 @@ export const getDashboardStats = async (
       totalServices,
       totalEvents,
       totalUsers,
+      totalAnnouncements,
       complaintsByCategory,
       complaintsByPriority,
       recentActivity,

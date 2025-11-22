@@ -4,17 +4,69 @@ import {
   login,
   getProfile,
   updateProfile,
+  changePassword,
+  refreshToken,
+  getAllUsers,
+  updateUserRole,
+  verifyUser,
+  deleteUser,
 } from "../controllers/authController";
-import { authenticate } from "../middleware/auth";
-import { registerValidation, loginValidation } from "../middleware/validation";
+import { authenticate, authorize } from "../middleware/auth";
+import {
+  registerValidation,
+  loginValidation,
+  updateProfileValidation,
+  changePasswordValidation,
+  idValidation,
+  queryValidation,
+} from "../middleware/validation";
 import { authLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
-// Apply auth rate limiter to login and register
+// Public routes
 router.post("/register", authLimiter, registerValidation, register);
 router.post("/login", authLimiter, loginValidation, login);
+router.post("/refresh-token", refreshToken);
+
+// Protected routes (authenticated users)
 router.get("/profile", authenticate, getProfile);
-router.put("/profile", authenticate, updateProfile);
+router.put("/profile", authenticate, updateProfileValidation, updateProfile);
+router.put(
+  "/change-password",
+  authenticate,
+  changePasswordValidation,
+  changePassword
+);
+
+// Admin only routes
+router.get(
+  "/users",
+  authenticate,
+  authorize("admin"),
+  queryValidation,
+  getAllUsers
+);
+router.put(
+  "/users/:id/role",
+  authenticate,
+  authorize("admin"),
+  idValidation,
+  updateUserRole
+);
+router.patch(
+  "/users/:id/verify",
+  authenticate,
+  authorize("admin"),
+  idValidation,
+  verifyUser
+);
+router.delete(
+  "/users/:id",
+  authenticate,
+  authorize("admin"),
+  idValidation,
+  deleteUser
+);
 
 export default router;

@@ -1,49 +1,109 @@
-import morgan from "morgan";
+import fs from "fs";
+import path from "path";
 
-/**
- * Custom logger utility for consistent logging across the application
- */
+const logsDir = path.join(process.cwd(), "logs");
+
+// Create logs directory if it doesn't exist
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+type LogLevel = "info" | "warn" | "error" | "debug";
+
+interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+  data?: any;
+}
+
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === "development";
+  private logToFile(level: LogLevel, message: string, data?: any): void {
+    const timestamp = new Date().toISOString();
+    const logEntry: LogEntry = {
+      timestamp,
+      level,
+      message,
+      ...(data && { data }),
+    };
 
-  info(message: string, meta?: Record<string, unknown>): void {
-    console.log(`[INFO] ${new Date().toISOString()} - ${message}`, meta || "");
+    const logLine = JSON.stringify(logEntry) + "\n";
+    const logFile = path.join(logsDir, `${level}.log`);
+
+    // Append to log file
+    fs.appendFile(logFile, logLine, (err) => {
+      if (err) {
+        console.error("Failed to write to log file:", err);
+      }
+    });
+
+    // Also append to combined log
+    const combinedLogFile = path.join(logsDir, "combined.log");
+    fs.appendFile(combinedLogFile, logLine, (err) => {
+      if (err) {
+        console.error("Failed to write to combined log file:", err);
+      }
+    });
   }
 
-  error(
-    message: string,
-    error?: Error | unknown,
-    meta?: Record<string, unknown>
-  ): void {
-    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`);
-    if (error instanceof Error) {
-      console.error(`Stack: ${error.stack}`);
+  private formatMessage(level: LogLevel, message: string, data?: any): string {
+    const timestamp = new Date().toISOString();
+    const emoji = {
+      info: "ℹ️",
+      warn: "⚠️",
+      error: "❌",
+      debug: "🐛",
+    };
+
+    let formatted = `${emoji[level]} [${timestamp}] [${level.toUpperCase()}] ${message}`;
+
+    if (data) {
+      formatted += "\n" + JSON.stringify(data, null, 2);
     }
-    if (meta) {
-      console.error("Meta:", meta);
+
+    return formatted;
+  }
+
+  info(message: string, data?: any): void {
+    const formatted = this.formatMessage("info", message, data);
+    console.log(formatted);
+
+    if (process.env.NODE_ENV !== "test") {
+      this.logToFile("info", message, data);
     }
   }
 
-  warn(message: string, meta?: Record<string, unknown>): void {
-    console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, meta || "");
-  }
+  warn(message: string, data?: any): void {
+    const formatted = this.formatMessage("warn", message, data);
+    console.warn(formatted);
 
-  debug(message: string, meta?: Record<string, unknown>): void {
-    if (this.isDevelopment) {
-      console.debug(
-        `[DEBUG] ${new Date().toISOString()} - ${message}`,
-        meta || ""
-      );
+    if (process.env.NODE_ENV !== "test") {
+      this.logToFile("warn", message, data);
     }
   }
 
-  /**
-   * Get Morgan middleware for HTTP request logging
-   */
-  getHttpLogger() {
-    const format = this.isDevelopment ? "dev" : "combined";
-    return morgan(format);
+  error(message: string, data?: any): void {
+    const formatted = this.formatMessage("error", message, data);
+    console.error(formatted);
+
+    if (process.env.NODE_ENV !== "test") {
+      this.logToFile("error", message, data);
+    }
+  }
+
+  debug(message: string, data?: any): void {
+    if (
+      process.env.NODE_ENV === "development" ||
+      process.env.LOG_LEVEL === "debug"
+    ) {
+      const formatted = this.formatMessage("debug", message, data);
+      console.debug(formatted);
+
+      if (process.env.NODE_ENV !== "test") {
+        this.logToFile("debug", message, data);
+      }
+    }
   }
 }
 
-export default new Logger();
+export const logger = new Logger();

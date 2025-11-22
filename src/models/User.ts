@@ -8,11 +8,15 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: [true, "First name is required"],
       trim: true,
+      minlength: [2, "First name must be at least 2 characters"],
+      maxlength: [50, "First name must not exceed 50 characters"],
     },
     lastName: {
       type: String,
       required: [true, "Last name is required"],
       trim: true,
+      minlength: [2, "Last name must be at least 2 characters"],
+      maxlength: [50, "Last name must not exceed 50 characters"],
     },
     email: {
       type: String,
@@ -25,21 +29,30 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters"],
+      minlength: [8, "Password must be at least 8 characters"],
       select: false,
     },
     role: {
       type: String,
-      enum: ["admin", "staff", "resident"],
+      enum: {
+        values: ["admin", "staff", "resident"],
+        message: "{VALUE} is not a valid role",
+      },
       default: "resident",
     },
     address: {
       type: String,
       required: [true, "Address is required"],
+      minlength: [10, "Address must be at least 10 characters"],
+      maxlength: [200, "Address must not exceed 200 characters"],
     },
     phoneNumber: {
       type: String,
       required: [true, "Phone number is required"],
+      match: [
+        /^(\+63|0)?[0-9]{10}$/,
+        "Please provide a valid Philippine phone number",
+      ],
     },
     isVerified: {
       type: Boolean,
@@ -57,20 +70,39 @@ userSchema.pre("save", async function (next) {
     return next();
   }
 
-  const salt: string = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
+  try {
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error: any) {
+    next(error);
+  }
 });
 
 // Compare password method
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    return false;
+  }
 };
 
-// Index for faster queries
-// `unique: true` on the `email` field already creates an index, so avoid duplicating it.
+// Virtual for full name
+userSchema.virtual("fullName").get(function () {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+// Ensure virtuals are included in JSON
+userSchema.set("toJSON", { virtuals: true });
+userSchema.set("toObject", { virtuals: true });
+
+// Indexes for faster queries
+userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1 });
+userSchema.index({ isVerified: 1 });
+userSchema.index({ createdAt: -1 });
 
 export default mongoose.model<IUser>("User", userSchema);

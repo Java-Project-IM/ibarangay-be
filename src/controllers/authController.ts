@@ -2,16 +2,42 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../types";
+import {
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+  ValidationError,
+} from "../utils/AppError";
 
 const generateToken = (id: string, role: string): string => {
-  const jwtSecret = process.env.JWT_SECRET || "default_secret";
+  const jwtSecret = process.env.JWT_SECRET;
   const jwtExpire = process.env.JWT_EXPIRE || "7d";
+
+  if (!jwtSecret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
 
   return jwt.sign({ id, role }, jwtSecret, {
     expiresIn: jwtExpire,
   } as jwt.SignOptions);
 };
 
+const generateRefreshToken = (id: string): string => {
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+  const jwtRefreshExpire = process.env.JWT_REFRESH_EXPIRE || "30d";
+
+  if (!jwtRefreshSecret) {
+    throw new Error("JWT_REFRESH_SECRET is not configured");
+  }
+
+  return jwt.sign({ id }, jwtRefreshSecret, {
+    expiresIn: jwtRefreshExpire,
+  } as jwt.SignOptions);
+};
+
+/**
+ * Register a new user
+ */
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { firstName, lastName, email, password, address, phoneNumber } =
@@ -20,11 +46,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
-      return;
+      throw new ConflictError("Email already registered");
     }
 
     // Create user
@@ -38,8 +60,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       role: "resident",
     });
 
-    // Generate token
+    // Generate tokens
     const token = generateToken(user._id.toString(), user.role);
+    const refreshToken = generateRefreshToken(user._id.toString());
 
     res.status(201).json({
       success: true,
@@ -53,20 +76,23 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           role: user.role,
           address: user.address,
           phoneNumber: user.phoneNumber,
+          isVerified: user.isVerified,
         },
         token,
+        refreshToken,
       },
     });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Registration failed";
-    res.status(500).json({
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: errorMessage,
+      message: error.message || "Registration failed",
     });
   }
 };
 
+/**
+ * Login user
+ */
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -74,25 +100,18 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Find user with password
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
-      res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-      return;
+      throw new UnauthorizedError("Invalid email or password");
     }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-      return;
+      throw new UnauthorizedError("Invalid email or password");
     }
 
-    // Generate token
+    // Generate tokens
     const token = generateToken(user._id.toString(), user.role);
+    const refreshToken = generateRefreshToken(user._id.toString());
 
     res.status(200).json({
       success: true,
@@ -106,20 +125,23 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           role: user.role,
           address: user.address,
           phoneNumber: user.phoneNumber,
+          isVerified: user.isVerified,
         },
         token,
+        refreshToken,
       },
     });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Login failed";
-    res.status(500).json({
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: errorMessage,
+      message: error.message || "Login failed",
     });
   }
 };
 
+/**
+ * Get user profile
+ */
 export const getProfile = async (
   req: AuthRequest,
   res: Response
@@ -128,11 +150,7 @@ export const getProfile = async (
     const user = await User.findById(req.user?.id);
 
     if (!user) {
-      res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-      return;
+      throw new NotFoundError("User not found");
     }
 
     res.status(200).json({
@@ -146,18 +164,21 @@ export const getProfile = async (
         address: user.address,
         phoneNumber: user.phoneNumber,
         isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to fetch profile";
-    res.status(500).json({
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: errorMessage,
+      message: error.message || "Failed to fetch profile",
     });
   }
 };
 
+/**
+ * Update user profile
+ */
 export const updateProfile = async (
   req: AuthRequest,
   res: Response
@@ -172,11 +193,7 @@ export const updateProfile = async (
     );
 
     if (!user) {
-      res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-      return;
+      throw new NotFoundError("User not found");
     }
 
     res.status(200).json({
@@ -190,14 +207,260 @@ export const updateProfile = async (
         role: user.role,
         address: user.address,
         phoneNumber: user.phoneNumber,
+        isVerified: user.isVerified,
       },
     });
-  } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to update profile";
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to update profile",
+    });
+  }
+};
+
+/**
+ * Change password
+ */
+export const changePassword = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user?.id).select("+password");
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError("Current password is incorrect");
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to change password",
+    });
+  }
+};
+
+/**
+ * Refresh access token
+ */
+export const refreshToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      throw new ValidationError("Refresh token is required");
+    }
+
+    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+    if (!jwtRefreshSecret) {
+      throw new Error("JWT_REFRESH_SECRET is not configured");
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, jwtRefreshSecret) as {
+      id: string;
+    };
+
+    // Get user
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      throw new UnauthorizedError("Invalid refresh token");
+    }
+
+    // Generate new access token
+    const newToken = generateToken(user._id.toString(), user.role);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        token: newToken,
+      },
+    });
+  } catch (error: any) {
+    if (
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.TokenExpiredError
+    ) {
+      res.status(401).json({
+        success: false,
+        message: "Invalid or expired refresh token",
+      });
+    } else {
+      res.status(error.statusCode || 500).json({
+        success: false,
+        message: error.message || "Failed to refresh token",
+      });
+    }
+  }
+};
+
+/**
+ * Get all users (admin only)
+ */
+export const getAllUsers = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { role, isVerified } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+
+    if (role) {
+      query.role = role;
+    }
+
+    if (isVerified !== undefined) {
+      query.isVerified = isVerified === "true";
+    }
+
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      data: users,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        limit,
+      },
+    });
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: errorMessage,
+      message: error.message || "Failed to fetch users",
+    });
+  }
+};
+
+/**
+ * Update user role (admin only)
+ */
+export const updateUserRole = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { role } = req.body;
+    const { id } = req.params;
+
+    if (!["admin", "staff", "resident"].includes(role)) {
+      throw new ValidationError("Invalid role");
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User role updated successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to update user role",
+    });
+  }
+};
+
+/**
+ * Verify user account (admin only)
+ */
+export const verifyUser = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { isVerified: true },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User verified successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to verify user",
+    });
+  }
+};
+
+/**
+ * Delete user (admin only)
+ */
+export const deleteUser = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting own account
+    if (id === req.user?.id) {
+      throw new ValidationError("Cannot delete your own account");
+    }
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      throw new NotFoundError("User not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to delete user",
     });
   }
 };

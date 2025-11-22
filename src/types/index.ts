@@ -95,8 +95,31 @@ export interface INotification extends Document {
   type: "info" | "warning" | "success" | "error";
   isRead: boolean;
   relatedId?: Types.ObjectId;
-  relatedType?: "service" | "complaint" | "event";
+  relatedType?: "service" | "complaint" | "event" | "announcement";
   createdAt: Date;
+}
+
+export interface IAnnouncement extends Document {
+  _id: Types.ObjectId;
+  title: string;
+  content: string;
+  category:
+    | "general"
+    | "emergency"
+    | "event"
+    | "maintenance"
+    | "health"
+    | "security";
+  priority: "low" | "medium" | "high" | "urgent";
+  author: Types.ObjectId;
+  imageUrl?: string;
+  attachments?: string[];
+  isPublished: boolean;
+  publishedAt?: Date;
+  expiresAt?: Date;
+  views: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthRequest extends Request {
@@ -105,7 +128,6 @@ export interface AuthRequest extends Request {
     role: string;
   };
   id?: string; // Request ID for tracing
-  file?: Express.Multer.File; // Add multer file support
 }
 
 export interface JWTPayload {
@@ -121,8 +143,24 @@ export interface DashboardStats {
   totalServices: number;
   totalEvents: number;
   totalUsers: number;
+  totalAnnouncements: number;
   complaintsByCategory: Array<{ category: string; count: number }>;
   complaintsByPriority: Array<{ priority: string; count: number }>;
   recentActivity: Array<any>;
   averageResolutionTime: number;
+}
+
+export interface PaginationQuery {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: "asc" | "desc";
+}
+
+export interface FilterQuery {
+  status?: string;
+  category?: string;
+  priority?: string;
+  startDate?: Date;
+  endDate?: Date;
 }
