@@ -1,4 +1,3 @@
-import { body, validationResult } from "express-validator";
 import { Request, Response, NextFunction } from "express";
 import { ValidationError } from "../utils/AppError";
 import SystemConfig from "../models/SystemConfig";
