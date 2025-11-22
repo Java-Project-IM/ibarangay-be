@@ -2,6 +2,8 @@ import { Response } from "express";
 import { Types } from "mongoose";
 import Event from "../models/Event";
 import Notification from "../models/Notification";
+import AuditLog from "../models/AuditLog";
+import User from "../models/User";
 import { AuthRequest } from "../types";
 
 export const createEvent = async (
@@ -32,6 +34,21 @@ export const createEvent = async (
       attendees: [],
     });
 
+    // Create audit log
+    const user = await User.findById(req.user?.id);
+    if (user) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action: "create",
+        targetType: "event",
+        targetId: event._id,
+        details: { title, eventDate, location },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Event created successfully",
@@ -52,7 +69,7 @@ export const getEvents = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { status, category } = req.query;
+    const { status, category, search } = req.query;
     const query: Record<string, unknown> = {};
 
     if (status) {
@@ -63,14 +80,32 @@ export const getEvents = async (
       query.category = category;
     }
 
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const events = await Event.find(query)
       .populate("organizer", "firstName lastName")
-      .populate("attendees", "firstName lastName email")
+      .populate("attendees", "firstName lastName email phoneNumber")
       .sort({ eventDate: 1 });
+
+    // Add registration count to each event
+    const eventsWithCount = events.map((event) => ({
+      ...event.toObject(),
+      registrationCount: event.attendees.length,
+      spotsRemaining: event.maxAttendees
+        ? event.maxAttendees - event.attendees.length
+        : null,
+    }));
 
     res.status(200).json({
       success: true,
-      data: events,
+      data: eventsWithCount,
     });
   } catch (error: unknown) {
     const errorMessage =
@@ -89,7 +124,7 @@ export const getEventById = async (
   try {
     const event = await Event.findById(req.params.id)
       .populate("organizer", "firstName lastName email")
-      .populate("attendees", "firstName lastName email");
+      .populate("attendees", "firstName lastName email phoneNumber address");
 
     if (!event) {
       res.status(404).json({
@@ -99,13 +134,73 @@ export const getEventById = async (
       return;
     }
 
+    const eventData = {
+      ...event.toObject(),
+      registrationCount: event.attendees.length,
+      spotsRemaining: event.maxAttendees
+        ? event.maxAttendees - event.attendees.length
+        : null,
+    };
+
     res.status(200).json({
       success: true,
-      data: event,
+      data: eventData,
     });
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to fetch event";
+    res.status(500).json({
+      success: false,
+      message: errorMessage,
+    });
+  }
+};
+
+export const getEventAttendees = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const event = await Event.findById(req.params.id).populate(
+      "attendees",
+      "firstName lastName email phoneNumber address createdAt"
+    );
+
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+      return;
+    }
+
+    // Format attendee data with registration date
+    const attendeesWithDetails = event.attendees.map((attendee: any) => ({
+      id: attendee._id,
+      firstName: attendee.firstName,
+      lastName: attendee.lastName,
+      fullName: `${attendee.firstName} ${attendee.lastName}`,
+      email: attendee.email,
+      phoneNumber: attendee.phoneNumber,
+      address: attendee.address,
+      registeredAt: attendee.createdAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        eventId: event._id,
+        eventTitle: event.title,
+        totalAttendees: event.attendees.length,
+        maxAttendees: event.maxAttendees,
+        attendees: attendeesWithDetails,
+      },
+    });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch event attendees";
     res.status(500).json({
       success: false,
       message: errorMessage,
@@ -165,6 +260,21 @@ export const registerForEvent = async (
       relatedType: "event",
     });
 
+    // Create audit log
+    const user = await User.findById(req.user?.id);
+    if (user) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action: "register",
+        targetType: "event",
+        targetId: event._id,
+        details: { eventTitle: event.title },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Successfully registered for event",
@@ -214,6 +324,21 @@ export const unregisterFromEvent = async (
       (attendeeId: Types.ObjectId) => !attendeeId.equals(userId)
     );
     await event.save();
+
+    // Create audit log
+    const user = await User.findById(req.user?.id);
+    if (user) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action: "unregister",
+        targetType: "event",
+        targetId: event._id,
+        details: { eventTitle: event.title },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -266,6 +391,21 @@ export const updateEvent = async (
       { new: true, runValidators: true }
     );
 
+    // Create audit log
+    const user = await User.findById(req.user?.id);
+    if (user) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action: "update",
+        targetType: "event",
+        targetId: event._id,
+        details: { eventTitle: event.title, updates: req.body },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Event updated successfully",
@@ -310,6 +450,21 @@ export const deleteEvent = async (
 
     await event.deleteOne();
 
+    // Create audit log
+    const user = await User.findById(req.user?.id);
+    if (user) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${user.firstName} ${user.lastName}`,
+        action: "delete",
+        targetType: "event",
+        targetId: event._id,
+        details: { eventTitle: event.title },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Event deleted successfully",
@@ -317,6 +472,53 @@ export const deleteEvent = async (
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to delete event";
+    res.status(500).json({
+      success: false,
+      message: errorMessage,
+    });
+  }
+};
+
+export const exportEventAttendees = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const event = await Event.findById(req.params.id).populate(
+      "attendees",
+      "firstName lastName email phoneNumber address"
+    );
+
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+      return;
+    }
+
+    // Format data for export
+    const exportData = {
+      eventTitle: event.title,
+      eventDate: event.eventDate,
+      location: event.location,
+      totalAttendees: event.attendees.length,
+      maxAttendees: event.maxAttendees,
+      attendees: event.attendees.map((attendee: any) => ({
+        name: `${attendee.firstName} ${attendee.lastName}`,
+        email: attendee.email,
+        phoneNumber: attendee.phoneNumber,
+        address: attendee.address,
+      })),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: exportData,
+    });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to export attendees";
     res.status(500).json({
       success: false,
       message: errorMessage,

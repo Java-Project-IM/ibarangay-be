@@ -46,6 +46,23 @@ const serviceSchema = new Schema<IService>(
     notes: {
       type: String,
     },
+    rejectionReason: {
+      type: String,
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: {
+      type: Date,
+    },
+    rejectedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    rejectedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

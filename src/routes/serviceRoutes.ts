@@ -5,6 +5,8 @@ import {
   getServiceRequestById,
   updateServiceStatus,
   deleteServiceRequest,
+  approveServiceRequest,
+  rejectServiceRequest,
 } from "../controllers/serviceController";
 import { authenticate, authorize } from "../middleware/auth";
 import {
@@ -30,6 +32,20 @@ router.put(
   authorize("admin", "staff"),
   idValidation,
   updateServiceStatus
+);
+router.put(
+  "/:id/approve",
+  authenticate,
+  authorize("admin", "staff"),
+  idValidation,
+  approveServiceRequest
+);
+router.put(
+  "/:id/reject",
+  authenticate,
+  authorize("admin", "staff"),
+  idValidation,
+  rejectServiceRequest
 );
 router.delete("/:id", authenticate, idValidation, deleteServiceRequest);
 

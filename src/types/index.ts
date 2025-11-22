@@ -28,6 +28,11 @@ export interface IService extends Document {
   purpose: string;
   quantity: number;
   notes?: string;
+  rejectionReason?: string;
+  approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  rejectedBy?: Types.ObjectId;
+  rejectedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

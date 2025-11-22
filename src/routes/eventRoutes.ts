@@ -3,10 +3,12 @@ import {
   createEvent,
   getEvents,
   getEventById,
+  getEventAttendees,
   registerForEvent,
   unregisterFromEvent,
   updateEvent,
   deleteEvent,
+  exportEventAttendees,
 } from "../controllers/eventController";
 import { authenticate, authorize } from "../middleware/auth";
 import { eventValidation, idValidation } from "../middleware/validation";
@@ -22,6 +24,14 @@ router.post(
 );
 router.get("/", authenticate, getEvents);
 router.get("/:id", authenticate, idValidation, getEventById);
+router.get("/:id/attendees", authenticate, idValidation, getEventAttendees);
+router.get(
+  "/:id/attendees/export",
+  authenticate,
+  authorize("admin", "staff"),
+  idValidation,
+  exportEventAttendees
+);
 router.post("/:id/register", authenticate, idValidation, registerForEvent);
 router.post("/:id/unregister", authenticate, idValidation, unregisterFromEvent);
 router.put(

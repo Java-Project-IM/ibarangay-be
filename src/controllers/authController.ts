@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import AuditLog from "../models/AuditLog";
+import Notification from "../models/Notification";
 import { AuthRequest } from "../types";
 import {
   UnauthorizedError,
@@ -321,7 +323,7 @@ export const getAllUsers = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { role, isVerified } = req.query;
+    const { role, isVerified, search } = req.query;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
@@ -334,6 +336,15 @@ export const getAllUsers = async (
 
     if (isVerified !== undefined) {
       query.isVerified = isVerified === "true";
+    }
+
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
     }
 
     const total = await User.countDocuments(query);
@@ -384,6 +395,21 @@ export const updateUserRole = async (
 
     if (!user) {
       throw new NotFoundError("User not found");
+    }
+
+    // Create audit log
+    const adminUser = await User.findById(req.user?.id);
+    if (adminUser) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${adminUser.firstName} ${adminUser.lastName}`,
+        action: "update_role",
+        targetType: "user",
+        targetId: user._id,
+        details: { newRole: role, userEmail: user.email },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
     }
 
     res.status(200).json({
@@ -453,6 +479,21 @@ export const deleteUser = async (
       throw new NotFoundError("User not found");
     }
 
+    // Create audit log
+    const adminUser = await User.findById(req.user?.id);
+    if (adminUser) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${adminUser.firstName} ${adminUser.lastName}`,
+        action: "delete",
+        targetType: "user",
+        targetId: user._id,
+        details: { userEmail: user.email, userRole: user.role },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "User deleted successfully",
@@ -461,6 +502,85 @@ export const deleteUser = async (
     res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Failed to delete user",
+    });
+  }
+};
+
+/**
+ * Create staff or admin account (admin only)
+ */
+export const createStaffAdmin = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { firstName, lastName, email, password, address, phoneNumber, role } =
+      req.body;
+
+    // Validate role
+    if (!["admin", "staff"].includes(role)) {
+      throw new ValidationError("Role must be either admin or staff");
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new ConflictError("Email already registered");
+    }
+
+    // Create user
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      password,
+      address,
+      phoneNumber,
+      role,
+      isVerified: true, // Auto-verify staff/admin accounts
+    });
+
+    // Create notification for the new user
+    await Notification.create({
+      userId: user._id,
+      title: "Account Created",
+      message: `Your ${role} account has been created. You can now log in to the system.`,
+      type: "info",
+    });
+
+    // Create audit log
+    const adminUser = await User.findById(req.user?.id);
+    if (adminUser) {
+      await AuditLog.create({
+        userId: req.user?.id,
+        userName: `${adminUser.firstName} ${adminUser.lastName}`,
+        action: "create",
+        targetType: "user",
+        targetId: user._id,
+        details: { userEmail: user.email, userRole: role },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully`,
+      data: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        address: user.address,
+        phoneNumber: user.phoneNumber,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to create account",
     });
   }
 };

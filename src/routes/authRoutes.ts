@@ -10,6 +10,7 @@ import {
   updateUserRole,
   verifyUser,
   deleteUser,
+  createStaffAdmin,
 } from "../controllers/authController";
 import { authenticate, authorize } from "../middleware/auth";
 import {
@@ -46,6 +47,13 @@ router.get(
   authorize("admin"),
   queryValidation,
   getAllUsers
+);
+router.post(
+  "/users/staff-admin",
+  authenticate,
+  authorize("admin"),
+  registerValidation,
+  createStaffAdmin
 );
 router.put(
   "/users/:id/role",
