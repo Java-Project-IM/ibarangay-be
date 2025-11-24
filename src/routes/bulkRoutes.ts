@@ -8,7 +8,7 @@ import {
   exportComplaints,
   exportServices,
 } from "../controllers/bulkController";
-import { authenticate, authorize } from "../middleware/security";
+import { authenticate, authorize } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -18,32 +18,32 @@ router.use(authenticate);
 // Bulk complaint operations - Admin and Staff
 router.post(
   "/complaints/status",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   bulkUpdateComplaintsStatus,
 );
 router.post(
   "/complaints/assign",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   bulkAssignComplaints,
 );
-router.post("/complaints/delete", authorize(["admin"]), bulkDeleteComplaints);
+router.post("/complaints/delete", authorize("admin"), bulkDeleteComplaints);
 router.get(
   "/complaints/export",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   exportComplaints,
 );
 
 // Bulk service operations - Admin and Staff
 router.post(
   "/services/status",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   bulkUpdateServicesStatus,
 );
 router.post(
   "/services/assign",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   bulkAssignServices,
 );
-router.get("/services/export", authorize(["admin", "staff"]), exportServices);
+router.get("/services/export", authorize("admin", "staff"), exportServices);
 
 export default router;

@@ -4,7 +4,7 @@ import {
   filterComplaints,
   filterServices,
 } from "../controllers/searchController";
-import { authenticate } from "../middleware/security";
+import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
 

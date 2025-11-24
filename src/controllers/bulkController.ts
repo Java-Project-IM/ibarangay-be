@@ -217,8 +217,8 @@ export const exportComplaints = async (req: Request, res: Response) => {
     }
 
     const complaints = await Complaint.find(filter)
-      .populate("userId", "name email")
-      .populate("assignedTo", "name email")
+      .populate("userId", "firstName lastName email")
+      .populate("assignedTo", "firstName lastName email")
       .lean();
 
     // Transform data for CSV
@@ -229,9 +229,13 @@ export const exportComplaints = async (req: Request, res: Response) => {
       Category: c.category,
       Status: c.status,
       Priority: c.priority || "normal",
-      "Submitted By": c.userId?.name || "N/A",
-      "Submitted Email": c.userId?.email || "N/A",
-      "Assigned To": c.assignedTo?.name || "Unassigned",
+      "Submitted By": c.userId
+        ? `${(c.userId as any).firstName || ''} ${(c.userId as any).lastName || ''}`.trim() || 'N/A'
+        : 'N/A',
+      "Submitted Email": (c.userId as any)?.email || "N/A",
+      "Assigned To": c.assignedTo
+        ? `${(c.assignedTo as any).firstName || ''} ${(c.assignedTo as any).lastName || ''}`.trim()
+        : "Unassigned",
       "Created At": new Date(c.createdAt).toLocaleString(),
       "Updated At": new Date(c.updatedAt).toLocaleString(),
     }));
@@ -271,8 +275,8 @@ export const exportServices = async (req: Request, res: Response) => {
     }
 
     const services = await Service.find(filter)
-      .populate("userId", "name email")
-      .populate("assignedTo", "name email")
+      .populate("userId", "firstName lastName email")
+      .populate("assignedTo", "firstName lastName email")
       .lean();
 
     // Transform data for CSV
@@ -283,9 +287,13 @@ export const exportServices = async (req: Request, res: Response) => {
       Category: s.category,
       Status: s.status,
       Priority: s.priority || "normal",
-      "Requested By": s.userId?.name || "N/A",
-      "Requested Email": s.userId?.email || "N/A",
-      "Assigned To": s.assignedTo?.name || "Unassigned",
+      "Requested By": s.userId
+        ? `${(s.userId as any).firstName || ''} ${(s.userId as any).lastName || ''}`.trim()
+        : 'N/A',
+      "Requested Email": (s.userId as any)?.email || "N/A",
+      "Assigned To": s.assignedTo
+        ? `${(s.assignedTo as any).firstName || ''} ${(s.assignedTo as any).lastName || ''}`.trim()
+        : "Unassigned",
       "Created At": new Date(s.createdAt).toLocaleString(),
       "Updated At": new Date(s.updatedAt).toLocaleString(),
     }));

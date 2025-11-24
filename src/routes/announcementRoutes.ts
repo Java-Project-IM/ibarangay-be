@@ -8,7 +8,7 @@ import {
   togglePublishAnnouncement,
   togglePinAnnouncement,
 } from "../controllers/announcementController";
-import { authenticate, authorize } from "../middleware/security";
+import { authenticate, authorize } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -20,26 +20,26 @@ router.get("/:id", getAnnouncementById);
 router.post(
   "/",
   authenticate,
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   createAnnouncement,
 );
 router.put(
   "/:id",
   authenticate,
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   updateAnnouncement,
 );
-router.delete("/:id", authenticate, authorize(["admin"]), deleteAnnouncement);
+router.delete("/:id", authenticate, authorize("admin"), deleteAnnouncement);
 router.patch(
   "/:id/publish",
   authenticate,
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   togglePublishAnnouncement,
 );
 router.patch(
   "/:id/pin",
   authenticate,
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   togglePinAnnouncement,
 );
 

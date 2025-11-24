@@ -273,7 +273,7 @@ export const getCategoryDistribution = async (req: Request, res: Response) => {
 export const getStaffPerformance = async (req: Request, res: Response) => {
   try {
     const staffMembers = await User.find({ role: "staff" }).select(
-      "name email",
+      "firstName lastName email",
     );
 
     const performance = await Promise.all(
@@ -299,7 +299,7 @@ export const getStaffPerformance = async (req: Request, res: Response) => {
         return {
           staff: {
             id: staff._id,
-            name: staff.name,
+            name: `${(staff as any).firstName || ''} ${(staff as any).lastName || ''}`.trim(),
             email: staff.email,
           },
           complaints: {

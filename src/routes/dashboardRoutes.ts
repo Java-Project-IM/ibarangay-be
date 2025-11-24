@@ -6,7 +6,7 @@ import {
   getCategoryDistribution,
   getStaffPerformance,
 } from "../controllers/dashboardController";
-import { authenticate, authorize } from "../middleware/security";
+import { authenticate, authorize } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -14,22 +14,22 @@ const router = express.Router();
 router.use(authenticate);
 
 // Dashboard statistics - Admin and Staff only
-router.get("/stats", authorize(["admin", "staff"]), getDashboardStats);
+router.get("/stats", authorize("admin", "staff"), getDashboardStats);
 
 // Recent activities - Admin and Staff only
-router.get("/activities", authorize(["admin", "staff"]), getRecentActivities);
+router.get("/activities", authorize("admin", "staff"), getRecentActivities);
 
 // Time-series data for charts - Admin and Staff only
-router.get("/time-series", authorize(["admin", "staff"]), getTimeSeriesData);
+router.get("/time-series", authorize("admin", "staff"), getTimeSeriesData);
 
 // Category distribution - Admin and Staff only
 router.get(
   "/category-distribution",
-  authorize(["admin", "staff"]),
+  authorize("admin", "staff"),
   getCategoryDistribution,
 );
 
 // Staff performance - Admin only
-router.get("/staff-performance", authorize(["admin"]), getStaffPerformance);
+router.get("/staff-performance", authorize("admin"), getStaffPerformance);
 
 export default router;

@@ -2,7 +2,6 @@ import { Request } from "express";
 import { Document, Types } from "mongoose";
 
 export interface IUser extends Document {
-  _id: Types.ObjectId;
   firstName: string;
   lastName: string;
   email: string;
@@ -11,13 +10,14 @@ export interface IUser extends Document {
   address: string;
   phoneNumber: string;
   isVerified: boolean;
+  isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  fullName: string;
 }
 
 export interface IService extends Document {
-  _id: Types.ObjectId;
   userId: Types.ObjectId;
   itemName: string;
   itemType: string;
@@ -33,6 +33,11 @@ export interface IService extends Document {
   approvedAt?: Date;
   rejectedBy?: Types.ObjectId;
   rejectedAt?: Date;
+  assignedTo?: Types.ObjectId;
+  title?: string;
+  description?: string;
+  category?: string;
+  priority?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,7 +59,6 @@ export interface IComplaintHistory {
 }
 
 export interface IComplaint extends Document {
-  _id: Types.ObjectId;
   userId: Types.ObjectId;
   title: string;
   description: string;
@@ -77,10 +81,10 @@ export interface IComplaint extends Document {
 }
 
 export interface IEvent extends Document {
-  _id: Types.ObjectId;
   title: string;
   description: string;
   eventDate: Date;
+  date?: Date;
   location: string;
   organizer: Types.ObjectId;
   maxAttendees?: number;
@@ -93,7 +97,6 @@ export interface IEvent extends Document {
 }
 
 export interface INotification extends Document {
-  _id: Types.ObjectId;
   userId: Types.ObjectId;
   title: string;
   message: string;
@@ -105,7 +108,6 @@ export interface INotification extends Document {
 }
 
 export interface IAnnouncement extends Document {
-  _id: Types.ObjectId;
   title: string;
   content: string;
   category:
@@ -127,12 +129,23 @@ export interface IAnnouncement extends Document {
   updatedAt: Date;
 }
 
+export interface IAuditLog extends Document {
+  userId: Types.ObjectId;
+  action: string;
+  resourceType: string;
+  resourceId?: Types.ObjectId;
+  details?: any;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: Date;
+}
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     role: string;
   };
-  id?: string; // Request ID for tracing
+  id?: string;
 }
 
 export interface JWTPayload {

@@ -11,13 +11,13 @@ import {
   getAuditLogs,
   bulkUpdateUsers,
 } from "../controllers/adminController";
-import { authenticate, authorize } from "../middleware/security";
+import { authenticate, authorize } from "../middleware/auth";
 
 const router = express.Router();
 
 // All admin routes require authentication and admin role
 router.use(authenticate);
-router.use(authorize(["admin"]));
+router.use(authorize("admin"));
 
 // User management routes
 router.get("/users", getAllUsers);
