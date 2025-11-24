@@ -12,6 +12,13 @@ import announcementRoutes from "./routes/announcementRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import bulkRoutes from "./routes/bulkRoutes";
 import searchRoutes from "./routes/searchRoutes";
+import serviceRoutes from "./routes/serviceRoutes";
+import complaintRoutes from "./routes/complaintRoutes";
+import eventRoutes from "./routes/eventRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
+import uploadRoutes from "./routes/uploadRoutes";
+import configRoutes from "./routes/configRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 
 const app: Application = express();
 
@@ -47,6 +54,19 @@ app.use("/api/v1/announcements", announcementRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/bulk", bulkRoutes);
 app.use("/api/v1/search", searchRoutes);
+
+// Additional API routes registered to match frontend expectations
+app.use("/api/v1/services", serviceRoutes);
+app.use("/api/v1/complaints", complaintRoutes);
+app.use("/api/v1/events", eventRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+
+// Upload routes expose paths like /complaints/:id/attachments and /events/:id/image
+// Mount at the v1 root so those exact paths are available: /api/v1/complaints/:id/attachments
+app.use("/api/v1", uploadRoutes);
+
+app.use("/api/v1/config", configRoutes);
+app.use("/api/v1/analytics", analyticsRoutes);
 
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
